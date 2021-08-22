@@ -54,4 +54,11 @@ class TodosControllerTest < ActionDispatch::IntegrationTest
 
     assert_response 404
   end
+
+  test "should error with unprocesable " do
+    assert_no_difference('Item.count') do
+      post todos_url, params: { todo: { created_by: nil, title: nil } }, as: :json
+    end
+    assert_response 422
+  end
 end

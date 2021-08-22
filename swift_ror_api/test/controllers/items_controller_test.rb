@@ -69,4 +69,12 @@ class ItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response 404
   end
+
+  test "should fail with unprocesable entity" do
+    assert_no_difference('Item.count') do
+      post todo_items_url(@todo), params: { item: { done: nil, name: nil, todo_id: nil } }, as: :json
+    end
+
+    assert_response 422
+  end
 end
