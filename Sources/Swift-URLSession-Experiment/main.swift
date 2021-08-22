@@ -144,7 +144,7 @@ class Client {
 }
 
 enum SwiftRoRAPI {
-static func todos() -> Http.Endpoint<[SwiftRoR.TodoDto]> {
+static func todos() -> Http.Endpoint<[TodosDto]> {
     Http.Endpoint(
         method: .get,
         path: "/todos.json"
@@ -152,21 +152,12 @@ static func todos() -> Http.Endpoint<[SwiftRoR.TodoDto]> {
 }
 }  // SwiftRoRAPI
 
-enum SwiftRoR {
-struct TodoDto: Decodable {
-    let title: String
-    let created_by: String
-    let created_at: Date
-    let updated_at: Date?
-}
-}  // SwiftRoR
-
 class SwiftRoRService {
     private var swiftAPIClient = Http.Client(baseURL: "http://localhost:3000",
                                              basePath: "",
                                              defaultHeaders: ["Accept": "application/json"])
 
-    func listTodos(_ onFinish: @escaping (Http.Result<[SwiftRoR.TodoDto]>) -> Void) {
+    func listTodos(_ onFinish: @escaping (Http.Result<[TodosDto]>) -> Void) {
         swiftAPIClient.request(SwiftRoRAPI.todos()) { result in
             defer { sem.signal() }
             onFinish(result)

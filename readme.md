@@ -15,6 +15,11 @@ This is an epxerimental project to try to use URLSession to access a remote API.
 ## Requirements
 - Swift
 - Ruby On Rails
+- [BenderButler (Optional)](https://github.com/madcato/BenderButler)
+
+## Generate DTO structs (Optional)
+
+    $ cd Sources/Swift-URLSession-Experiment && bender generate codables ../../swift_ror_api/db/schema.rb
 
 ## Run
 
