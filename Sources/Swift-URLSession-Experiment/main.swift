@@ -48,7 +48,14 @@ extension Http.Endpoint where Response: Swift.Decodable {
                      path: Http.Path,
                      parameters: Http.Parameters? = nil) {
         self.init(method: method, path: path, parameters: parameters) {
-            try JSONDecoder().decode(Response.self, from: $0)
+            let decoder = JSONDecoder()
+            // if #available(macOS 10.12, iOS 10.0, watchOS 3.0, tvOS 10.0, *) {
+            //     decoder.dateDecodingStrategy = .iso8601
+            // }
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"  // Rails default format
+            decoder.dateDecodingStrategy = .formatted(dateFormatter)
+            return try decoder.decode(Response.self, from: $0)
         }
     }
 }
@@ -152,6 +159,8 @@ enum SwiftRoR {
 struct TodoDto: Decodable {
     let title: String
     let created_by: String
+    let created_at: Date
+    let updated_at: Date?
 }
 }  // SwiftRoR
 
