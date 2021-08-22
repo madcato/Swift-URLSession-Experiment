@@ -1,6 +1,6 @@
 # Swift URLSession Experiment
 
-This is an epxerimental project to try to use URLSession to access a remote API. But instead of defining a **Codable** class to deserialize the API responses, the object to handle data will be generic (like Dictionary).
+This is an epxerimental project to try to use URLSession to access a remote API.
 
 (This project has a subproject, made in Ruby On Rails, to build the remote API)
 
