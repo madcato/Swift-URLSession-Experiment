@@ -20,6 +20,6 @@ This is an epxerimental project to try to use URLSession to access a remote API.
 
     $ swift run Swift-URLSession-Experiment
 
-## Run spec tests
+## Run ror tests
 
     $ cd swift_ror_api && rake test
