@@ -2,6 +2,21 @@ import Foundation
 
 let sem = DispatchSemaphore(value: 0)
 
+protocol Dictionariable {
+    var asDictionary : [String: Any] { get }
+}
+
+extension Dictionariable {
+    var asDictionary : [String: Any] {
+    let mirror = Mirror(reflecting: self)
+    let dict = Dictionary(uniqueKeysWithValues: mirror.children.lazy.map({ (label:String?, value:Any) -> (String, Any)? in
+      guard let label = label else { return nil }
+      return (label, value)
+    }).compactMap { $0 })
+    return dict
+  }
+}
+
 enum Http {
 
 enum Result<Response> {
@@ -22,21 +37,32 @@ enum Method {
 typealias Parameters = [String: Any]
 typealias Path = String
 
-final class Endpoint<Response> {
+// final class Endpoint<Response> {
+//     let method: Method
+//     let path: Path
+//     let parameters: Parameters?
+//     let decode: (Data) throws -> Response
+
+//     init(method: Method,
+//          path: Path,
+//          parameters: Parameters? = nil,
+//          decode: @escaping (Data) throws -> Response) {
+//         self.method = method
+//         self.path = path
+//         self.parameters = parameters
+//         self.decode = decode
+//     }
+// }
+
+struct Endpoint<Request: Dictionariable, Response> {
     let method: Method
     let path: Path
-    let parameters: Parameters?
+    let parameters: Request?
     let decode: (Data) throws -> Response
+}
 
-    init(method: Method,
-         path: Path,
-         parameters: Parameters? = nil,
-         decode: @escaping (Data) throws -> Response) {
-        self.method = method
-        self.path = path
-        self.parameters = parameters
-        self.decode = decode
-    }
+struct EmptyRequest: Dictionariable {
+
 }
 
 }  // Http
@@ -44,9 +70,9 @@ final class Endpoint<Response> {
 // MARK: - Endpoint extensions
 
 extension Http.Endpoint where Response: Swift.Decodable {
-    convenience init(method: Http.Method,
-                     path: Http.Path,
-                     parameters: Http.Parameters? = nil) {
+    init(method: Http.Method,
+         path: Http.Path,
+         parameters: Request? = nil) {
         self.init(method: method, path: path, parameters: parameters) {
             let decoder = JSONDecoder()
             let dateFormatter = DateFormatter()
@@ -58,9 +84,9 @@ extension Http.Endpoint where Response: Swift.Decodable {
 }
 
 extension Http.Endpoint where Response == Void {
-    convenience init(method: Http.Method,
-                     path: Http.Path,
-                     parameters: Http.Parameters? = nil) {
+    init(method: Http.Method,
+         path: Http.Path,
+         parameters: Request? = nil) {
         self.init(
             method: method,
             path: path,
@@ -90,7 +116,7 @@ class Client {
     ///               The response will be decoded to this format
     /// - param completion: this block will be called at the end of the processing, with the resul or the error
     ///
-    func request<Response>(_ endpoint: Http.Endpoint<Response>,
+    func request<Request: Dictionariable, Response>(_ endpoint: Http.Endpoint<Request, Response>,
                            completion: @escaping (Http.Result<Response>) -> Void) {
         guard dataTask == nil else {
             fatalError("Trying to launch a data task before finising previous.")
@@ -102,7 +128,19 @@ class Client {
         var components = URLComponents(url: url, resolvingAgainstBaseURL: true)
         if let parameters: [String: String?] = endpoint.parameters as? [String: String?] {
             components?.queryItems = parameters.map { key, value in
-                URLQueryItem(name: key, value: value)
+                guard let encodedKey = key.addingPercentEncoding(withAllowedCharacters: .alphanumerics) else {
+                    fatalError("Invalid key to be http encoded")
+                }
+                var encodedValue: String? = nil
+                if let value = value {
+                    guard let tempEncodedValue = value.addingPercentEncoding(withAllowedCharacters: .alphanumerics) else {
+                        fatalError("Invalid key to be http encoded")
+                    }
+                    encodedValue = tempEncodedValue
+                }
+
+                return URLQueryItem(name: encodedKey,
+                                    value: encodedValue)
             }
         }
         if let finalQuery = components?.percentEncodedQuery?.replacingOccurrences(of: "+", with: "%2B") {
@@ -144,12 +182,12 @@ class Client {
 }
 
 enum SwiftRoRAPI {
-static func todos() -> Http.Endpoint<[TodosDto]> {
-    Http.Endpoint(
-        method: .get,
-        path: "/todos.json"
-    )
-}
+    static func todos() -> Http.Endpoint<Http.EmptyRequest, [TodosDto]> {
+        Http.Endpoint(
+            method: .get,
+            path: "/todos.json"
+        )
+    }
 }  // SwiftRoRAPI
 
 class SwiftRoRService {
@@ -157,7 +195,7 @@ class SwiftRoRService {
                                              basePath: "",
                                              defaultHeaders: ["Accept": "application/json"])
 
-    func listTodos(_ onFinish: @escaping (Http.Result<[TodosDto]>) -> Void) {
+    func todos(_ onFinish: @escaping (Http.Result<[TodosDto]>) -> Void) {
         swiftAPIClient.request(SwiftRoRAPI.todos()) { result in
             defer { sem.signal() }
             onFinish(result)
@@ -165,7 +203,7 @@ class SwiftRoRService {
     }
 }
 
-SwiftRoRService().listTodos { result in
+SwiftRoRService().todos { result in
     switch result {
     case let .success(response):
         // onFinish(Http.Result.success(array))
@@ -178,3 +216,19 @@ SwiftRoRService().listTodos { result in
 }
 
 sem.wait()
+
+// struct Request1: Dictionariable {
+//     var name = "Hola"
+//     var desc = "tastat"
+//     var age = 18
+// }
+
+// let endpoint = Http.Endpoint2<Request1, String>(method: .get, 
+//                               path: "/asdf/adsf", 
+//                               encode: { request in 
+//                                 return nil
+//                               }, 
+//                               decode: { data in
+//                                 return ""
+//                               })
+// print(Request1().asDictionary)
